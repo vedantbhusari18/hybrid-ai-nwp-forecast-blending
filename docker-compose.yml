@@ -1,0 +1,39 @@
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: infra/backend.Dockerfile
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: sqlite:///./data/hybrid.db
+      JWT_SECRET: ${JWT_SECRET:-development-only-please-change-me!!}
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000}
+      DEMO_EMAIL: analyst@example.com
+      DEMO_PASSWORD: "Forecast#2026"
+      DATA_SOURCE: synthetic
+      DISABLE_SCHEDULER: "false"
+      SCHEDULE_HOURS: "6"
+    volumes:
+      - blend-data:/app/data
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/health')"]
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 40s
+
+  frontend:
+    build:
+      context: .
+      dockerfile: infra/frontend.Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:8000}
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_healthy
+
+volumes:
+  blend-data:
